@@ -371,6 +371,14 @@
                 </label>
                 <div class="toggle-desc" data-i18n="colorTintDesc">Tint gifts to match target colors for better accuracy</div>
             </div>
+            <div class="control-group">
+                <label data-i18n="fillBackground">Fill Background</label>
+                <label class="toggle">
+                    <input type="checkbox" id="fillBackground">
+                    <span class="toggle-slider"></span>
+                </label>
+                <div class="toggle-desc" data-i18n="fillBackgroundDesc">Fill gaps behind gifts with matching color</div>
+            </div>
             <div class="control-group btn-group">
                 <button id="generateBtn" disabled data-i18n="generate">Generate Mosaic</button>
             </div>
@@ -438,6 +446,8 @@
                 advancedDesc: 'Unlock finer detail and larger output for high-res mosaics',
                 colorTint: 'Color Tint',
                 colorTintDesc: 'Tint gifts to match target colors for better accuracy',
+                fillBackground: 'Fill Background',
+                fillBackgroundDesc: 'Fill gaps behind gifts with matching color',
                 generate: 'Generate Mosaic',
                 advancedWarning: '⚠️ Advanced mode allows huge canvases. Requires powerful device & lots of RAM.',
                 collections: 'Collections',
@@ -461,6 +471,8 @@
                 advancedDesc: 'Более тонкая детализация и больший размер для HD-мозаик',
                 colorTint: 'Окрашивание',
                 colorTintDesc: 'Окрашивает подарки для точной цветопередачи',
+                fillBackground: 'Заливка фона',
+                fillBackgroundDesc: 'Заполняет промежутки за подарками цветом',
                 generate: 'Создать мозаику',
                 advancedWarning: '⚠️ Расширенный режим создаёт огромные изображения. Требуется мощное устройство.',
                 collections: 'Коллекции',
@@ -518,6 +530,7 @@
         const tileSizeAdv = document.getElementById('tileSizeAdv');
         const outputTileAdv = document.getElementById('outputTileAdv');
         const colorTint = document.getElementById('colorTint');
+                const fillBackground = document.getElementById('fillBackground');
         const loading = document.getElementById('loading');
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
@@ -737,6 +750,12 @@
                     if (img) {
                         const x = col * outTile;
                         const y = row * outTile;
+                        
+                        // Fill background if enabled
+                        if (fillBackground.checked) {
+                            resCtx.fillStyle = `rgb(${r},${g},${b})`;
+                            resCtx.fillRect(x, y, outTile, outTile);
+                        }
                         
                         if (colorTint.checked) {
                             // Use offscreen canvas for tinting
