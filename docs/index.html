@@ -328,7 +328,7 @@
 <body>
     <div class="init-loading" id="initLoading">
         <div class="loader"></div>
-        <div class="init-text"><span data-i18n="loading">Loading</span> <span id="loadCount">0</span> <span data-i18n="giftImages">gift images</span>...</div>
+        <div class="init-text"><span data-i18n="loading">Loading</span> <span id="loadCount">0</span> / <span id="loadTotal">0</span> <span data-i18n="giftImages">gift images</span>...</div>
     </div>
     
     <div class="lang-switch">
@@ -595,6 +595,9 @@
             ]);
             colors = await colorsRes.json();
             collections = await collectionsRes.json();
+            
+            // Show total count
+            document.getElementById('loadTotal').textContent = colors.length;
             
             // Select all by default
             selectedCollections = new Set(Object.keys(collections));
