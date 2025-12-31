@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Mosaic Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.8em;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #a855f7, #7c3aed, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 60px rgba(139, 92, 246, 0.3);
+        }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 1.1em; }
+        .upload-area {
+            border: 3px dashed #333;
+            border-radius: 24px;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.02);
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .upload-area:hover { border-color: #8b5cf6; }
+        .upload-area:hover::before { opacity: 1; }
+        .upload-area.dragover { border-color: #a855f7; background: rgba(139, 92, 246, 0.08); }
+        .upload-area.has-image { border-style: solid; border-color: #2d2d4a; }
+        .upload-icon { font-size: 4em; margin-bottom: 15px; filter: grayscale(0.3); }
+        .upload-text { color: #888; font-size: 1.1em; }
+        #fileInput { display: none; }
+        .controls {
+            display: flex; gap: 15px; margin: 25px 0; flex-wrap: wrap; justify-content: center; align-items: stretch;
+        }
+        .control-group {
+            background: rgba(255,255,255,0.03);
+            padding: 18px 24px;
+            border-radius: 16px;
+            border: 1px solid #222;
+            min-width: 180px;
+        }
+        .control-group label { display: block; margin-bottom: 10px; color: #777; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }
+        .value { color: #a855f7; font-weight: 600; font-size: 1.1em; }
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #222;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(245, 87, 108, 0.4);
+        }
+        .btn-group { display: flex; align-items: flex-end; gap: 10px; }
+        button {
+            background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+            border: none;
+            padding: 16px 40px;
+            font-size: 1.1em;
+            border-radius: 30px;
+            cursor: pointer;
+            color: #fff;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+        }
+        button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        button.secondary {
+            background: rgba(255,255,255,0.1);
+            box-shadow: none;
+        }
+        button.secondary:hover:not(:disabled) { background: rgba(255,255,255,0.15); box-shadow: none; }
+        .preview-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 25px;
+        }
+        @media (max-width: 900px) { .preview-container { grid-template-columns: 1fr; } }
+        .preview-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #1a1a2e;
+        }
+        .preview-box h3 {
+            margin-bottom: 15px;
+            color: #555;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .preview-box canvas, .preview-box img {
+            width: 100%;
+            border-radius: 12px;
+            background: repeating-conic-gradient(#1a1a2a 0% 25%, #0f0f1a 0% 50%) 50% / 20px 20px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 60px;
+        }
+        .progress-bar {
+            width: 300px;
+            height: 8px;
+            background: #1a1a2e;
+            border-radius: 4px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #a855f7, #7c3aed);
+            border-radius: 4px;
+            transition: width 0.1s;
+        }
+        .progress-text { color: #666; font-size: 0.95em; }
+        .stats { color: #555; font-size: 0.9em; margin-top: 15px; }
+        .download-area { margin-top: 20px; text-align: center; }
+        .hidden { display: none !important; }
+                .toggle {
+                    position: relative;
+                    display: inline-block;
+                    width: 50px;
+                    height: 26px;
+                    cursor: pointer;
+                }
+                .toggle input { opacity: 0; width: 0; height: 0; }
+                .toggle-slider {
+                    position: absolute;
+                    inset: 0;
+                    background: #222;
+                    border-radius: 26px;
+                    transition: 0.3s;
+                }
+                .toggle-slider::before {
+                    content: '';
+                    position: absolute;
+                    width: 20px; height: 20px;
+                    left: 3px; bottom: 3px;
+                    background: #555;
+                    border-radius: 50%;
+                    transition: 0.3s;
+                }
+                .toggle input:checked + .toggle-slider { background: #7c3aed; }
+                .toggle input:checked + .toggle-slider::before {
+                    transform: translateX(24px);
+                    background: #fff;
+                }
+                .advanced-controls {
+                    background: rgba(124, 58, 237, 0.1);
+                    border: 1px solid #7c3aed33;
+                    border-radius: 16px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                }
+                .advanced-row {
+                    display: flex;
+                    gap: 15px;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+                .warning {
+                    color: #f59e0b;
+                    font-size: 0.9em;
+                    margin-bottom: 15px;
+                    text-align: center;
+                }
+        .collections-section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid #222;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .collections-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .collections-header h3 {
+            color: #777;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .collections-header button {
+            padding: 8px 16px;
+            font-size: 0.85em;
+        }
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .collection-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+        }
+        .collection-item:hover { background: rgba(255,255,255,0.06); }
+        .collection-item.selected { border-color: #7c3aed; background: rgba(124, 58, 237, 0.15); }
+        .collection-item input { display: none; }
+        .collection-check {
+            width: 18px; height: 18px;
+            border: 2px solid #444;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .collection-item.selected .collection-check {
+            background: #7c3aed;
+            border-color: #7c3aed;
+        }
+        .collection-name {
+            flex: 1;
+            font-size: 0.9em;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .collection-count {
+            font-size: 0.75em;
+            color: #555;
+        }
+        .selected-count {
+            color: #a855f7;
+            font-size: 0.9em;
+        }
+        .init-loading {
+            position: fixed;
+            inset: 0;
+            background: #0f0f1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .init-loading.fade-out {
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        .loader {
+            width: 60px; height: 60px;
+            border: 4px solid #1a1a2e;
+            border-top-color: #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .init-text { margin-top: 20px; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="init-loading" id="initLoading">
+        <div class="loader"></div>
+        <div class="init-text">Loading <span id="loadCount">0</span> gift images...</div>
+    </div>
+
+    <div class="container">
+        <h1>Gift Mosaic Generator</h1>
+        <p class="subtitle">Transform your photos into mosaics made of Telegram gifts • <a href="https://t.me/fiscaldev" target="_blank" style="color:#a855f7;text-decoration:none">by @fiscaldev</a></p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📷</div>
+            <p class="upload-text">Drop an image here or click to upload</p>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Detail Level <span class="value" id="tileSizeVal">20</span>px</label>
+                <input type="range" id="tileSize" min="8" max="40" value="20">
+            </div>
+            <div class="control-group">
+                <label>Gift Size <span class="value" id="outputTileVal">48</span>px</label>
+                <input type="range" id="outputTile" min="24" max="96" value="48">
+            </div>
+            <div class="control-group">
+                <label>Advanced Mode</label>
+                <label class="toggle">
+                    <input type="checkbox" id="advancedMode">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="control-group">
+                <label>Color Tint</label>
+                <label class="toggle">
+                    <input type="checkbox" id="colorTint">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="control-group btn-group">
+                <button id="generateBtn" disabled>Generate Mosaic</button>
+            </div>
+        </div>
+        
+        <div class="advanced-controls hidden" id="advancedControls">
+            <div class="warning">⚠️ Advanced mode allows huge canvases. Requires powerful device & lots of RAM.</div>
+            <div class="advanced-row">
+                <div class="control-group">
+                    <label>Detail Level <span class="value" id="tileSizeValAdv">10</span>px</label>
+                    <input type="range" id="tileSizeAdv" min="4" max="20" value="10">
+                </div>
+                <div class="control-group">
+                    <label>Gift Size <span class="value" id="outputTileValAdv">64</span>px</label>
+                    <input type="range" id="outputTileAdv" min="32" max="128" value="64">
+                </div>
+            </div>
+        </div>
+        
+        <div class="collections-section">
+            <div class="collections-header">
+                <h3>Collections <span class="selected-count" id="selectedCount">(loading...)</span></h3>
+                <div>
+                    <button class="secondary" id="selectAllBtn" style="margin-right:8px">Select All</button>
+                    <button class="secondary" id="selectNoneBtn">Select None</button>
+                </div>
+            </div>
+            <div class="collections-grid" id="collectionsGrid"></div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <p class="progress-text">Generating mosaic... <span id="progressText">0%</span></p>
+        </div>
+        
+        <div class="preview-container hidden" id="previewContainer">
+            <div class="preview-box">
+                <h3>Original</h3>
+                <canvas id="sourceCanvas"></canvas>
+            </div>
+            <div class="preview-box">
+                <h3>Mosaic</h3>
+                <canvas id="resultCanvas"></canvas>
+                <div class="stats" id="stats"></div>
+                <div class="download-area">
+                    <button id="downloadBtn" class="secondary">Download PNG</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const THUMB_SIZE = 48;
+        const THUMBS_PATH = 'thumbs/';
+        
+        let colors = [];
+        let collections = {};
+        let selectedCollections = new Set();
+        let thumbImages = new Map();
+        let sourceImage = null;
+        
+        // DOM elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const tileSize = document.getElementById('tileSize');
+        const outputTile = document.getElementById('outputTile');
+        const advancedMode = document.getElementById('advancedMode');
+        const advancedControls = document.getElementById('advancedControls');
+        const tileSizeAdv = document.getElementById('tileSizeAdv');
+        const outputTileAdv = document.getElementById('outputTileAdv');
+        const colorTint = document.getElementById('colorTint');
+        const loading = document.getElementById('loading');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const previewContainer = document.getElementById('previewContainer');
+        const sourceCanvas = document.getElementById('sourceCanvas');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const initLoading = document.getElementById('initLoading');
+        const loadCount = document.getElementById('loadCount');
+        const collectionsGrid = document.getElementById('collectionsGrid');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        function updateSelectedCount() {
+            const total = Object.keys(collections).length;
+            const selected = selectedCollections.size;
+            selectedCount.textContent = `(${selected}/${total})`;
+        }
+        
+        function renderCollections() {
+            collectionsGrid.innerHTML = '';
+            const sorted = Object.entries(collections).sort((a, b) => a[1].name.localeCompare(b[1].name));
+            
+            for (const [key, col] of sorted) {
+                const div = document.createElement('div');
+                div.className = 'collection-item' + (selectedCollections.has(key) ? ' selected' : '');
+                div.innerHTML = `
+                    <div class="collection-check">${selectedCollections.has(key) ? '✓' : ''}</div>
+                    <span class="collection-name">${col.name}</span>
+                    <span class="collection-count">${col.count}</span>
+                `;
+                div.onclick = () => {
+                    if (selectedCollections.has(key)) {
+                        selectedCollections.delete(key);
+                        div.classList.remove('selected');
+                        div.querySelector('.collection-check').textContent = '';
+                    } else {
+                        selectedCollections.add(key);
+                        div.classList.add('selected');
+                        div.querySelector('.collection-check').textContent = '✓';
+                    }
+                    updateSelectedCount();
+                };
+                collectionsGrid.appendChild(div);
+            }
+            updateSelectedCount();
+        }
+        
+        document.getElementById('selectAllBtn').onclick = () => {
+            selectedCollections = new Set(Object.keys(collections));
+            renderCollections();
+        };
+        
+        document.getElementById('selectNoneBtn').onclick = () => {
+            selectedCollections.clear();
+            renderCollections();
+        };
+        
+        // Load colors and preload images
+        async function init() {
+            const [colorsRes, collectionsRes] = await Promise.all([
+                fetch('colors.json'),
+                fetch('collections.json')
+            ]);
+            colors = await colorsRes.json();
+            collections = await collectionsRes.json();
+            
+            // Select all by default
+            selectedCollections = new Set(Object.keys(collections));
+            renderCollections();
+            
+            // Preload all thumbnails
+            let loaded = 0;
+            const batchSize = 100;
+            
+            for (let i = 0; i < colors.length; i += batchSize) {
+                const batch = colors.slice(i, i + batchSize);
+                await Promise.all(batch.map(async ([id, r, g, b, collection, filename]) => {
+                    const img = new Image();
+                    img.src = `${THUMBS_PATH}${collection}/${filename}.png`;
+                    await new Promise(resolve => {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                    });
+                    thumbImages.set(id, img);
+                    loaded++;
+                }));
+                loadCount.textContent = loaded;
+            }
+            
+            initLoading.classList.add('fade-out');
+            setTimeout(() => initLoading.style.display = 'none', 500);
+        }
+        
+        init();
+        
+        // Upload handling
+        uploadArea.onclick = () => fileInput.click();
+        uploadArea.ondragover = e => { e.preventDefault(); uploadArea.classList.add('dragover'); };
+        uploadArea.ondragleave = () => uploadArea.classList.remove('dragover');
+        uploadArea.ondrop = e => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        };
+        fileInput.onchange = () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); };
+        
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    sourceImage = img;
+                    generateBtn.disabled = false;
+                    uploadArea.classList.add('has-image');
+                    uploadArea.innerHTML = `<div class="upload-icon">✅</div><p class="upload-text">${file.name}<br><small style="color:#555">${img.width} × ${img.height}</small></p>`;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        tileSize.oninput = () => document.getElementById('tileSizeVal').textContent = tileSize.value;
+        outputTile.oninput = () => document.getElementById('outputTileVal').textContent = outputTile.value;
+        tileSizeAdv.oninput = () => document.getElementById('tileSizeValAdv').textContent = tileSizeAdv.value;
+        outputTileAdv.oninput = () => document.getElementById('outputTileValAdv').textContent = outputTileAdv.value;
+        
+        advancedMode.onchange = () => {
+            advancedControls.classList.toggle('hidden', !advancedMode.checked);
+        };
+        
+        // Find closest gift by color (filtered by selected collections)
+        function findClosest(r, g, b, used) {
+            let best = null, bestDist = Infinity;
+            for (const [id, cr, cg, cb, collection] of colors) {
+                if (!selectedCollections.has(collection)) continue;
+                if (used.has(id)) continue;
+                const dist = (cr-r)**2 + (cg-g)**2 + (cb-b)**2;
+                if (dist < bestDist) { bestDist = dist; best = id; }
+            }
+            if (best === null) {
+                // Fallback: pick random from selected
+                const filtered = colors.filter(c => selectedCollections.has(c[4]));
+                if (filtered.length > 0) {
+                    best = filtered[Math.floor(Math.random() * filtered.length)][0];
+                }
+            }
+            return best;
+        }
+        
+        generateBtn.onclick = async () => {
+            if (!sourceImage) return;
+            if (selectedCollections.size === 0) {
+                alert('Please select at least one collection');
+                return;
+            }
+            
+            const tile = advancedMode.checked ? parseInt(tileSizeAdv.value) : parseInt(tileSize.value);
+            const outTile = advancedMode.checked ? parseInt(outputTileAdv.value) : parseInt(outputTile.value);
+            
+            const cols = Math.floor(sourceImage.width / tile);
+            const rows = Math.floor(sourceImage.height / tile);
+            
+            // Draw source preview
+            sourceCanvas.width = cols * tile;
+            sourceCanvas.height = rows * tile;
+            const srcCtx = sourceCanvas.getContext('2d');
+            srcCtx.drawImage(sourceImage, 0, 0, cols * tile, rows * tile);
+            
+            // Setup result canvas
+            resultCanvas.width = cols * outTile;
+            resultCanvas.height = rows * outTile;
+            const resCtx = resultCanvas.getContext('2d');
+            // Keep transparent background
+            resCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            
+            previewContainer.classList.remove('hidden');
+            loading.style.display = 'block';
+            generateBtn.disabled = true;
+            
+            const total = rows * cols;
+            const used = new Set();
+            const recentQueue = [];
+            const maxRecent = Math.min(100, Math.floor(colors.length / 8));
+            
+            let processed = 0;
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    // Get tile average color
+                    const tileData = srcCtx.getImageData(col * tile, row * tile, tile, tile).data;
+                    let r = 0, g = 0, b = 0, opaqueCount = 0;
+                    for (let i = 0; i < tileData.length; i += 4) {
+                        const alpha = tileData[i + 3];
+                        if (alpha > 128) {
+                            r += tileData[i];
+                            g += tileData[i+1];
+                            b += tileData[i+2];
+                            opaqueCount++;
+                        }
+                    }
+                    
+                    const pixels = tileData.length / 4;
+                    processed++;
+                    
+                    // Skip mostly transparent tiles
+                    if (opaqueCount < pixels * 0.3) continue;
+                    
+                    r = Math.round(r / opaqueCount);
+                    g = Math.round(g / opaqueCount);
+                    b = Math.round(b / opaqueCount);
+                    
+                    // Find and draw closest gift
+                    const id = findClosest(r, g, b, used);
+                    const img = thumbImages.get(id);
+                    if (img) {
+                        const x = col * outTile;
+                        const y = row * outTile;
+                        
+                        if (colorTint.checked) {
+                            // Use offscreen canvas for tinting
+                            const offCanvas = document.createElement('canvas');
+                            offCanvas.width = outTile;
+                            offCanvas.height = outTile;
+                            const offCtx = offCanvas.getContext('2d');
+                            
+                            // Draw gift
+                            offCtx.drawImage(img, 0, 0, outTile, outTile);
+                            
+                            // Apply color with multiply
+                            offCtx.globalCompositeOperation = 'multiply';
+                            offCtx.fillStyle = `rgb(${r},${g},${b})`;
+                            offCtx.fillRect(0, 0, outTile, outTile);
+                            
+                            // Restore alpha
+                            offCtx.globalCompositeOperation = 'destination-in';
+                            offCtx.drawImage(img, 0, 0, outTile, outTile);
+                            
+                            // Draw result to main canvas
+                            resCtx.drawImage(offCanvas, x, y);
+                        } else {
+                            resCtx.drawImage(img, x, y, outTile, outTile);
+                        }
+                    }
+                    
+                    // Track recently used
+                    recentQueue.push(id);
+                    used.add(id);
+                    if (recentQueue.length > maxRecent) used.delete(recentQueue.shift());
+                }
+                
+                // Update progress each row
+                const pct = Math.round(processed / total * 100);
+                progressFill.style.width = pct + '%';
+                progressText.textContent = pct + '%';
+                
+                // Yield to browser
+                if (row % 5 === 0) await new Promise(r => setTimeout(r, 0));
+            }
+            
+            loading.style.display = 'none';
+            generateBtn.disabled = false;
+            
+            document.getElementById('stats').textContent = 
+                `${resultCanvas.width} × ${resultCanvas.height} pixels • ${cols * rows} gifts`;
+        };
+        
+        downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.download = 'gift_mosaic.png';
+            link.href = resultCanvas.toDataURL('image/png', 1.0);
+            link.click();
+        };
+    </script>
+</body>
+</html>

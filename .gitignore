@@ -1,0 +1,9 @@
+node_modules/
+downloads/
+uploads/
+*.log
+.DS_Store
+Thumbs.db
+gradient_mosaic.png
+*.rar
+download.js
