@@ -299,6 +299,33 @@
             margin-top: 6px;
             line-height: 1.3;
         }
+        .color-picker-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .color-picker-row input[type="color"] {
+            width: 36px;
+            height: 26px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+        .color-picker-row input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .color-picker-row input[type="color"]::-webkit-color-swatch {
+            border-radius: 4px;
+            border: 2px solid #444;
+        }
+        .color-hex {
+            font-size: 0.8em;
+            color: #666;
+            font-family: monospace;
+        }
         .init-loading {
             position: fixed;
             inset: 0;
@@ -379,6 +406,18 @@
                 </label>
                 <div class="toggle-desc" data-i18n="fillBackgroundDesc">Fill gaps behind gifts with matching color</div>
             </div>
+            <div class="control-group">
+                <label data-i18n="customBg">Custom Background</label>
+                <label class="toggle">
+                    <input type="checkbox" id="customBg">
+                    <span class="toggle-slider"></span>
+                </label>
+                <div class="toggle-desc" data-i18n="customBgDesc">Use custom color for entire background</div>
+                <div class="color-picker-row" id="bgColorRow" style="display:none">
+                    <input type="color" id="bgColor" value="#1a1a2e">
+                    <span class="color-hex" id="bgColorHex">#1a1a2e</span>
+                </div>
+            </div>
             <div class="control-group btn-group">
                 <button id="generateBtn" disabled data-i18n="generate">Generate Mosaic</button>
             </div>
@@ -448,6 +487,8 @@
                 colorTintDesc: 'Tint gifts to match target colors for better accuracy',
                 fillBackground: 'Fill Background',
                 fillBackgroundDesc: 'Fill gaps behind gifts with matching color',
+                customBg: 'Custom Background',
+                customBgDesc: 'Use custom color for entire background',
                 generate: 'Generate Mosaic',
                 advancedWarning: '⚠️ Advanced mode allows huge canvases. Requires powerful device & lots of RAM.',
                 collections: 'Collections',
@@ -473,6 +514,8 @@
                 colorTintDesc: 'Окрашивает подарки для точной цветопередачи',
                 fillBackground: 'Заливка фона',
                 fillBackgroundDesc: 'Заполняет промежутки за подарками цветом',
+                customBg: 'Свой фон',
+                customBgDesc: 'Использовать свой цвет для всего фона',
                 generate: 'Создать мозаику',
                 advancedWarning: '⚠️ Расширенный режим создаёт огромные изображения. Требуется мощное устройство.',
                 collections: 'Коллекции',
@@ -531,6 +574,10 @@
         const outputTileAdv = document.getElementById('outputTileAdv');
         const colorTint = document.getElementById('colorTint');
                 const fillBackground = document.getElementById('fillBackground');
+                        const customBg = document.getElementById('customBg');
+                        const bgColor = document.getElementById('bgColor');
+                        const bgColorRow = document.getElementById('bgColorRow');
+                        const bgColorHex = document.getElementById('bgColorHex');
         const loading = document.getElementById('loading');
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
@@ -666,6 +713,14 @@
             advancedControls.classList.toggle('hidden', !advancedMode.checked);
         };
         
+        customBg.onchange = () => {
+            bgColorRow.style.display = customBg.checked ? 'flex' : 'none';
+        };
+        
+        bgColor.oninput = () => {
+            bgColorHex.textContent = bgColor.value;
+        };
+        
         // Find closest gift by color (filtered by selected collections)
         function findClosest(r, g, b, used) {
             let best = null, bestDist = Infinity;
@@ -708,8 +763,14 @@
             resultCanvas.width = cols * outTile;
             resultCanvas.height = rows * outTile;
             const resCtx = resultCanvas.getContext('2d');
-            // Keep transparent background
-            resCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            
+            // Fill with custom background or keep transparent
+            if (customBg.checked) {
+                resCtx.fillStyle = bgColor.value;
+                resCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+            } else {
+                resCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            }
             
             previewContainer.classList.remove('hidden');
             loading.style.display = 'block';
